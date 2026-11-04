@@ -12,15 +12,19 @@ const GEOCODE_TTL_MS = 24 * 60 * 60 * 1000;
 const GEOCODE_MIN_INTERVAL_MS = 1000;
 const GEOCODE_TIMEOUT_MS = 10000;
 
-let nextGeocodeAt = 0;
+let lastActualStart = 0;
+let startChain = Promise.resolve();
 const inFlight = new Map();
 let activeGeocodeGeneration = 0;
 
-function reserveThrottleSlot() {
-  const now = Date.now();
-  const slot = Math.max(now, nextGeocodeAt);
-  nextGeocodeAt = slot + GEOCODE_MIN_INTERVAL_MS;
-  return slot;
+function startGate() {
+  const run = startChain.then(async () => {
+    const wait = GEOCODE_MIN_INTERVAL_MS - (Date.now() - lastActualStart);
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastActualStart = Date.now();
+  });
+  startChain = run.catch(() => {});
+  return run;
 }
 
 const map = L.map("map", { worldCopyJump: true }).setView([20, 0], 2);
@@ -89,9 +93,7 @@ async function geocode(query) {
   if (inFlight.has(key)) return inFlight.get(key);
 
   const doFetch = async () => {
-    const slot = reserveThrottleSlot();
-    const wait = slot - Date.now();
-    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    await startGate();
 
     const params = new URLSearchParams({ format: "jsonv2", limit: "1", q });
     const controller = new AbortController();
@@ -140,7 +142,8 @@ async function geocode(query) {
   return promise;
 }
 
-function convertLatLon(lat, lon) {
+function convertLatLon(lat, lon, options = {}) {
+  if (!options.fromAddress) activeGeocodeGeneration++;
   const data = window.Maidenhead.latLonToGrid(lat, lon, 6);
   showResult({ grid: data, lat, lon, address: "—" });
   setMarker(Number(lat), Number(lon));
@@ -149,6 +152,7 @@ function convertLatLon(lat, lon) {
 }
 
 function convertGrid(grid) {
+  activeGeocodeGeneration++;
   const normalized = window.Maidenhead.normalizeGrid(grid);
   const center = window.Maidenhead.gridToLatLon(normalized);
   showResult({ grid: normalized, lat: center.lat, lon: center.lon, address: "—" });
@@ -171,7 +175,7 @@ $("address-form").addEventListener("submit", async (event) => {
   try {
     const place = await geocode($("address").value);
     applyIfCurrent(() => {
-      convertLatLon(place.lat, place.lon);
+      convertLatLon(place.lat, place.lon, { fromAddress: true });
       showResult({ address: place.display_name });
       setMarker(place.lat, place.lon, 12);
       $("status").textContent = "";

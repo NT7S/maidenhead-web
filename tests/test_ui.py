@@ -145,6 +145,36 @@ def test_latlon_conversion_clears_stale_address(nominatim):
     assert page.text_content("#result-address") == "—"
 
 
+def test_late_address_does_not_overwrite_local_conversion(app_page):
+    held = {}
+
+    def hold(route):
+        held["route"] = route
+
+    app_page.route(NOMINATIM_PATTERN, hold)
+    submit_address(app_page, "Slow Place")
+    assert wait_until(lambda: "route" in held, timeout=5)
+
+    app_page.fill("#lat", "0")
+    app_page.fill("#lon", "0")
+    app_page.click("#latlon-form button")
+    app_page.wait_for_function(
+        "document.querySelector('#result-grid').textContent === 'JJ00aa'"
+    )
+
+    held["route"].fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps(
+            [{"lat": "10", "lon": "20", "display_name": "Old address overrode local"}]
+        ),
+    )
+    time.sleep(0.3)
+
+    assert app_page.text_content("#result-grid") == "JJ00aa"
+    assert app_page.text_content("#result-address") == "—"
+
+
 def test_clear_cache_button_removes_only_app_cache(app_page):
     app_page.evaluate(
         """
@@ -208,28 +238,43 @@ def test_address_lookup_is_cached_for_24_hours(app_page):
     app_page.wait_for_function(
         "document.querySelector('#result-address').textContent === 'Cacheville'"
     )
+    assert wait_until(lambda: len(request_urls) == 1)
+    assert len(request_urls) == 1
+
+    # Let the throttle window pass. A second identical query must hit the cache,
+    # not the network.
+    time.sleep(1.1)
     submit_address(app_page, "cacheville")
     app_page.wait_for_function(
         "document.querySelector('#result-address').textContent === 'Cacheville'"
     )
-
-    assert wait_until(lambda: len(request_urls) >= 1)
-    time.sleep(0.5)
+    time.sleep(0.3)
     assert len(request_urls) == 1
 
-    raw = app_page.evaluate(
-        "window.localStorage.getItem('maidenhead.geocode.v1:cacheville')"
+    # Age the cached entry past its TTL and verify the next query refetches.
+    app_page.evaluate(
+        """
+        () => {
+          const key = 'maidenhead.geocode.v1:cacheville';
+          const entry = JSON.parse(localStorage.getItem(key));
+          entry.ts = Date.now() - 25 * 60 * 60 * 1000;
+          localStorage.setItem(key, JSON.stringify(entry));
+        }
+        """
     )
-    assert raw is not None
-    entry = json.loads(raw)
-    assert entry["value"]["display_name"] == "Cacheville"
-    assert isinstance(entry["ts"], int)
+    submit_address(app_page, "Cacheville")
+    app_page.wait_for_function(
+        "document.querySelector('#result-address').textContent === 'Cacheville'"
+    )
+    assert wait_until(lambda: len(request_urls) == 2)
+    assert len(request_urls) == 2
 
 
 def test_geocode_requests_are_throttled_to_one_per_second(app_page):
     responses = {
         "throttle one": [{"lat": "10", "lon": "20", "display_name": "First Place"}],
         "throttle two": [{"lat": "30", "lon": "40", "display_name": "Second Place"}],
+        "throttle three": [{"lat": "50", "lon": "60", "display_name": "Third Place"}],
     }
 
     def handle(route):
@@ -254,10 +299,12 @@ def test_geocode_requests_are_throttled_to_one_per_second(app_page):
 
     submit_address(app_page, "Throttle One")
     submit_address(app_page, "Throttle Two")
+    submit_address(app_page, "Throttle Three")
     app_page.wait_for_function(
-        "document.querySelector('#result-address').textContent === 'Second Place'",
+        "document.querySelector('#result-address').textContent === 'Third Place'",
         timeout=15000,
     )
 
-    assert wait_until(lambda: len(stamps) >= 2, timeout=5)
-    assert max(stamps) - min(stamps) >= 0.9
+    assert wait_until(lambda: len(stamps) >= 3, timeout=5)
+    gaps = [b - a for a, b in zip(sorted(stamps), sorted(stamps)[1:])]
+    assert all(gap >= 0.9 for gap in gaps), gaps
