@@ -169,7 +169,7 @@ def test_late_address_does_not_overwrite_local_conversion(app_page):
             [{"lat": "10", "lon": "20", "display_name": "Old address overrode local"}]
         ),
     )
-    time.sleep(0.3)
+    app_page.wait_for_function("window.__lastGeocodeSettled >= 1")
 
     assert app_page.text_content("#result-grid") == "JJ00aa"
     assert app_page.text_content("#result-address") == "—"

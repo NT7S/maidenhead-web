@@ -186,6 +186,8 @@ $("address-form").addEventListener("submit", async (event) => {
     } else {
       setStatus(error.message);
     }
+  } finally {
+    window.__lastGeocodeSettled = (window.__lastGeocodeSettled || 0) + 1;
   }
 });
 
@@ -269,4 +271,5 @@ if (clearCacheButton) {
 
 pruneExpiredCache();
 
+window.__lastGeocodeSettled = 0;
 window.__maidenheadReady = true;
