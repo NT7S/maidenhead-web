@@ -130,6 +130,36 @@ def test_address_lookup_uses_nominatim_directly(nominatim):
     assert not any("/api/" in url for url in seen), "app must not call a backend API"
 
 
+def test_latlon_conversion_clears_stale_address(nominatim):
+    page = nominatim.page
+    submit_address(page, "Portland, OR")
+    page.wait_for_function(
+        "document.querySelector('#result-address').textContent === 'Portland, OR, USA'"
+    )
+    page.fill("#lat", "0")
+    page.fill("#lon", "0")
+    page.click("#latlon-form button")
+    page.wait_for_function(
+        "document.querySelector('#result-grid').textContent === 'JJ00aa'"
+    )
+    assert page.text_content("#result-address") == "—"
+
+
+def test_clear_cache_button_removes_only_app_cache(app_page):
+    app_page.evaluate(
+        """
+        () => {
+          localStorage.setItem('maidenhead.geocode.v1:test', '{"ts": 1, "value": {}}');
+          localStorage.setItem('unrelated-key', 'keep me');
+        }
+        """
+    )
+    app_page.click("#clear-cache")
+    assert app_page.evaluate("localStorage.getItem('maidenhead.geocode.v1:test')") is None
+    assert app_page.evaluate("localStorage.getItem('unrelated-key')") == "keep me"
+    assert "cleared" in app_page.text_content("#status").lower()
+
+
 def test_bad_address_shows_error(app_page):
     app_page.route(
         NOMINATIM_PATTERN,

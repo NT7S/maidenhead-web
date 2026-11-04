@@ -91,7 +91,20 @@ def test_invalid_grid_throws(js_page, bad):
 
 @pytest.mark.parametrize(
     "lat,lon",
-    [(91, 0), (-91, 0), (0, 181), (0, -181), ("NaN", 0), (0, "Infinity")],
+    [
+        (91, 0),
+        (-91, 0),
+        (0, 181),
+        (0, -181),
+        ("NaN", 0),
+        (0, "Infinity"),
+        (None, 0),
+        (0, None),
+        ("", 0),
+        (0, "  "),
+        ([], 0),
+        (0, []),
+    ],
 )
 def test_invalid_latlon_throws(js_page, lat, lon):
     result = js_page.evaluate(

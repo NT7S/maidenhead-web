@@ -81,6 +81,7 @@
     }
 
     if (
+      Array.isArray(lat) || Array.isArray(lon) ||
       lat === null || lon === null ||
       String(lat).trim() === "" || String(lon).trim() === ""
     ) {
@@ -146,6 +147,7 @@
     },
     isValidLatLon: function (lat, lon) {
       if (
+        Array.isArray(lat) || Array.isArray(lon) ||
         lat === null || lon === null ||
         String(lat).trim() === "" || String(lon).trim() === ""
       ) {

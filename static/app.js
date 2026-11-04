@@ -12,13 +12,15 @@ const GEOCODE_TTL_MS = 24 * 60 * 60 * 1000;
 const GEOCODE_MIN_INTERVAL_MS = 1000;
 const GEOCODE_TIMEOUT_MS = 10000;
 
-let lastGeocodeAt = 0;
+let nextGeocodeAt = 0;
 const inFlight = new Map();
+let activeGeocodeGeneration = 0;
 
-function scheduleThrottle() {
-  const wait = GEOCODE_MIN_INTERVAL_MS - (Date.now() - lastGeocodeAt);
-  if (wait <= 0) return Promise.resolve();
-  return new Promise((resolve) => setTimeout(resolve, wait));
+function reserveThrottleSlot() {
+  const now = Date.now();
+  const slot = Math.max(now, nextGeocodeAt);
+  nextGeocodeAt = slot + GEOCODE_MIN_INTERVAL_MS;
+  return slot;
 }
 
 const map = L.map("map", { worldCopyJump: true }).setView([20, 0], 2);
@@ -57,7 +59,8 @@ function readCache(key) {
     if (!raw) return null;
     const entry = JSON.parse(raw);
     if (!entry || typeof entry.ts !== "number" || !entry.value) return null;
-    if (Date.now() - entry.ts > GEOCODE_TTL_MS) {
+    const age = Date.now() - entry.ts;
+    if (age < 0 || age > GEOCODE_TTL_MS) {
       window.localStorage.removeItem(key);
       return null;
     }
@@ -86,8 +89,9 @@ async function geocode(query) {
   if (inFlight.has(key)) return inFlight.get(key);
 
   const doFetch = async () => {
-    await scheduleThrottle();
-    lastGeocodeAt = Date.now();
+    const slot = reserveThrottleSlot();
+    const wait = slot - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
 
     const params = new URLSearchParams({ format: "jsonv2", limit: "1", q });
     const controller = new AbortController();
@@ -155,15 +159,29 @@ function convertGrid(grid) {
 
 $("address-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  $("status").textContent = "Looking up address…";
+  const generation = ++activeGeocodeGeneration;
+  const applyIfCurrent = (fn) => {
+    if (generation === activeGeocodeGeneration) fn();
+  };
+  const setStatus = (text) => applyIfCurrent(() => {
+    $("status").textContent = text;
+  });
+
+  setStatus("Looking up address…");
   try {
     const place = await geocode($("address").value);
-    convertLatLon(place.lat, place.lon);
-    showResult({ address: place.display_name });
-    setMarker(place.lat, place.lon, 12);
-    $("status").textContent = "";
+    applyIfCurrent(() => {
+      convertLatLon(place.lat, place.lon);
+      showResult({ address: place.display_name });
+      setMarker(place.lat, place.lon, 12);
+      $("status").textContent = "";
+    });
   } catch (error) {
-    $("status").textContent = error.message;
+    if (error.name === "AbortError") {
+      setStatus("Address lookup timed out.");
+    } else {
+      setStatus(error.message);
+    }
   }
 });
 
@@ -198,6 +216,34 @@ map.on("click", (event) => {
   }
 });
 
+function pruneExpiredCache() {
+  try {
+    const keys = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(GEOCODE_CACHE_PREFIX)) keys.push(k);
+    }
+    const now = Date.now();
+    keys.forEach((k) => {
+      try {
+        const entry = JSON.parse(window.localStorage.getItem(k));
+        if (!entry || typeof entry.ts !== "number") {
+          window.localStorage.removeItem(k);
+          return;
+        }
+        const age = now - entry.ts;
+        if (age < 0 || age > GEOCODE_TTL_MS) {
+          window.localStorage.removeItem(k);
+        }
+      } catch (error) {
+        window.localStorage.removeItem(k);
+      }
+    });
+  } catch (error) {
+    /* best effort */
+  }
+}
+
 function clearLocalCache() {
   try {
     const keys = [];
@@ -216,5 +262,7 @@ const clearCacheButton = $("clear-cache");
 if (clearCacheButton) {
   clearCacheButton.addEventListener("click", clearLocalCache);
 }
+
+pruneExpiredCache();
 
 window.__maidenheadReady = true;
