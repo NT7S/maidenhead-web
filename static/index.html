@@ -10,7 +10,7 @@
 <body>
   <header>
     <h1>Maidenhead Grid Tools</h1>
-    <p>Convert coordinates, look up an address, or drop a pin on the map. Everything runs in your browser.</p>
+    <p>Convert coordinates, look up an address, or drop a pin on the map. Conversions run in your browser; address lookups use OpenStreetMap Nominatim.</p>
   </header>
 
   <main>
@@ -23,6 +23,11 @@
           <button type="submit">Find</button>
         </div>
       </form>
+      <p class="privacy-note">
+        Address lookup sends your query to OpenStreetMap Nominatim; map tiles
+        also come from OSM. Searches are cached locally in your browser.
+        <button type="button" id="clear-cache">Clear local cache</button>
+      </p>
     </section>
 
     <section class="panel two-col">
@@ -51,11 +56,11 @@
 
     <section class="panel">
       <h2>World map</h2>
-      <div id="map"></div>
-      <p class="hint">Click anywhere on the map to drop a pin.</p>
+      <div id="map" role="application" aria-label="World map. Click or tap to drop a pin and read its Maidenhead grid."></div>
+      <p class="hint">Click or tap anywhere on the map to drop a pin.</p>
     </section>
 
-    <section class="panel result">
+    <section class="panel result" aria-live="polite" aria-atomic="false">
       <h2>Result</h2>
       <dl>
         <dt>Grid</dt><dd id="result-grid">—</dd>

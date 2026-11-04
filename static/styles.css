@@ -68,13 +68,31 @@ input {
 .row input { flex: 1; }
 
 button {
-  background: #2f81f7;
-  border-color: #2f81f7;
+  background: #1d4ed8;
+  border-color: #1d4ed8;
   color: white;
   cursor: pointer;
 }
 
-button:hover { background: #4b93ff; }
+button:hover { background: #2563eb; }
+
+.privacy-note {
+  color: #9fb0bf;
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0;
+}
+
+.privacy-note button {
+  background: transparent;
+  border-color: #4b6a82;
+  color: #b8c6d2;
+  padding: 0.35rem 0.6rem;
+  margin-left: 0.5rem;
+}
+
+.privacy-note button:hover {
+  background: #2d3d4c;
+}
 
 #map {
   height: 420px;

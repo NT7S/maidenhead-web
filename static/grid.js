@@ -80,6 +80,12 @@
       throw new Error("precision must be 4 or 6");
     }
 
+    if (
+      lat === null || lon === null ||
+      String(lat).trim() === "" || String(lon).trim() === ""
+    ) {
+      throw new Error("latitude and longitude must be numbers");
+    }
     var latF = Number(lat);
     var lonF = Number(lon);
     if (Number.isNaN(latF) || Number.isNaN(lonF)) {
@@ -139,6 +145,12 @@
       }
     },
     isValidLatLon: function (lat, lon) {
+      if (
+        lat === null || lon === null ||
+        String(lat).trim() === "" || String(lon).trim() === ""
+      ) {
+        return false;
+      }
       var latF = Number(lat);
       var lonF = Number(lon);
       return (
