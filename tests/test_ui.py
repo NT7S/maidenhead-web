@@ -145,6 +145,28 @@ def test_latlon_conversion_clears_stale_address(nominatim):
     assert page.text_content("#result-address") == "—"
 
 
+def test_address_lookup_shows_immediate_progress(app_page):
+    held = {}
+    app_page.route(NOMINATIM_PATTERN, lambda route: held.setdefault("route", route))
+    submit_address(app_page, "Progress Place")
+    assert wait_until(lambda: "route" in held, timeout=5)
+
+    assert app_page.text_content("#address-status") == "Looking up address…"
+    assert app_page.text_content("#address-form button") == "Looking…"
+    assert app_page.locator("#address-form button").is_disabled()
+
+    held["route"].fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps(
+            [{"lat": "45.5152", "lon": "-122.6784", "display_name": "Progress Place"}]
+        ),
+    )
+    app_page.wait_for_function("window.__lastGeocodeSettled >= 1")
+    assert app_page.text_content("#address-status") == ""
+    assert app_page.text_content("#address-form button") == "Find"
+
+
 def test_late_address_does_not_overwrite_local_conversion(app_page):
     held = {}
 

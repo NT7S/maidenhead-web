@@ -57,6 +57,18 @@ function fillInputs({ grid, lat, lon }) {
   if (lon !== undefined) $("lon").value = lon;
 }
 
+function setAddressBusy(busy) {
+  const button = document.querySelector("#address-form button");
+  if (!button) return;
+  button.disabled = busy;
+  button.textContent = busy ? "Looking…" : "Find";
+}
+
+function setAddressStatus(text) {
+  const el = $("address-status");
+  if (el) el.textContent = text;
+}
+
 function readCache(key) {
   try {
     const raw = window.localStorage.getItem(key);
@@ -143,7 +155,11 @@ async function geocode(query) {
 }
 
 function convertLatLon(lat, lon, options = {}) {
-  if (!options.fromAddress) activeGeocodeGeneration++;
+  if (!options.fromAddress) {
+    activeGeocodeGeneration++;
+    setAddressBusy(false);
+    setAddressStatus("");
+  }
   const data = window.Maidenhead.latLonToGrid(lat, lon, 6);
   showResult({ grid: data, lat, lon, address: "—" });
   setMarker(Number(lat), Number(lon));
@@ -153,6 +169,8 @@ function convertLatLon(lat, lon, options = {}) {
 
 function convertGrid(grid) {
   activeGeocodeGeneration++;
+  setAddressBusy(false);
+  setAddressStatus("");
   const normalized = window.Maidenhead.normalizeGrid(grid);
   const center = window.Maidenhead.gridToLatLon(normalized);
   showResult({ grid: normalized, lat: center.lat, lon: center.lon, address: "—" });
@@ -172,6 +190,8 @@ $("address-form").addEventListener("submit", async (event) => {
   });
 
   setStatus("Looking up address…");
+  setAddressBusy(true);
+  setAddressStatus("Looking up address…");
   try {
     const place = await geocode($("address").value);
     applyIfCurrent(() => {
@@ -179,14 +199,17 @@ $("address-form").addEventListener("submit", async (event) => {
       showResult({ address: place.display_name });
       setMarker(place.lat, place.lon, 12);
       $("status").textContent = "";
+      setAddressStatus("");
     });
   } catch (error) {
-    if (error.name === "AbortError") {
-      setStatus("Address lookup timed out.");
-    } else {
-      setStatus(error.message);
-    }
+    const message =
+      error.name === "AbortError" ? "Address lookup timed out." : error.message;
+    applyIfCurrent(() => {
+      $("status").textContent = message;
+      setAddressStatus(message);
+    });
   } finally {
+    if (generation === activeGeocodeGeneration) setAddressBusy(false);
     window.__lastGeocodeSettled = (window.__lastGeocodeSettled || 0) + 1;
   }
 });
