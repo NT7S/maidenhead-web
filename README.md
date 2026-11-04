@@ -18,7 +18,8 @@ Then open http://127.0.0.1:8000. (`make run` is just
 
 ## Deploy to GitHub Pages
 
-1. Push this repository to GitHub with the default branch named `main`.
+1. Push this repository to GitHub. The workflow runs on pushes to `main` or
+   `master`; `main` is the recommended default.
 2. In the repository, open **Settings → Pages**.
 3. Under **Build and deployment → Source**, choose **GitHub Actions**.
 4. Push to `main` (or run the **Deploy static site to GitHub Pages** workflow
