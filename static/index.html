@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maidenhead Grid Tools</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Maidenhead Grid Tools</h1>
+    <p>Convert coordinates, look up an address, or drop a pin on the map. Everything runs in your browser.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Street address</h2>
+      <form id="address-form">
+        <label for="address">Address or place</label>
+        <div class="row">
+          <input id="address" name="address" placeholder="1600 Pennsylvania Ave NW, Washington, DC" required>
+          <button type="submit">Find</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel two-col">
+      <div>
+        <h2>Latitude / longitude</h2>
+        <form id="latlon-form">
+          <label>Latitude
+            <input id="lat" name="lat" type="number" step="any" min="-90" max="90" required>
+          </label>
+          <label>Longitude
+            <input id="lon" name="lon" type="number" step="any" min="-180" max="180" required>
+          </label>
+          <button type="submit">To grid</button>
+        </form>
+      </div>
+      <div>
+        <h2>Grid locator</h2>
+        <form id="grid-form">
+          <label>Grid
+            <input id="grid" name="grid" placeholder="CN85pl" required>
+          </label>
+          <button type="submit">To lat/lon</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>World map</h2>
+      <div id="map"></div>
+      <p class="hint">Click anywhere on the map to drop a pin.</p>
+    </section>
+
+    <section class="panel result">
+      <h2>Result</h2>
+      <dl>
+        <dt>Grid</dt><dd id="result-grid">—</dd>
+        <dt>Latitude</dt><dd id="result-lat">—</dd>
+        <dt>Longitude</dt><dd id="result-lon">—</dd>
+        <dt>Address</dt><dd id="result-address">—</dd>
+      </dl>
+      <p id="status" role="status"></p>
+    </section>
+  </main>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="grid.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
