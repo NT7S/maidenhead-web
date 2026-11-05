@@ -31,10 +31,11 @@ def test_every_local_asset_exists(base_url):
     _, body = fetch(f"{base_url}/")
     html = body.decode()
     assets = [a for a in ASSET_RE.findall(html) if not a.startswith(("http://", "https://", "data:"))]
-    assert "grid.js" in assets
-    assert "app.js" in assets
+    assert any(a.startswith("grid.js") for a in assets)
+    assert any(a.startswith("app.js") for a in assets)
     for asset in assets:
-        status, content = fetch(f"{base_url}/{asset.lstrip('/')}")
+        path = asset.split("?", 1)[0]
+        status, content = fetch(f"{base_url}/{path.lstrip('/')}")
         assert status == 200, asset
         assert content, asset
 
