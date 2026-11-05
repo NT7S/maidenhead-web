@@ -195,11 +195,13 @@ $("address-form").addEventListener("submit", async (event) => {
   try {
     const place = await geocode($("address").value);
     applyIfCurrent(() => {
-      convertLatLon(place.lat, place.lon, { fromAddress: true });
+      const grid = convertLatLon(place.lat, place.lon, { fromAddress: true });
       showResult({ address: place.display_name });
       setMarker(place.lat, place.lon, 12);
       $("status").textContent = "";
-      setAddressStatus("");
+      setAddressStatus(
+        `Grid ${grid} · ${Number(place.lat).toFixed(6)}, ${Number(place.lon).toFixed(6)}`
+      );
     });
   } catch (error) {
     const message =

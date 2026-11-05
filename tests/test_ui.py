@@ -163,7 +163,7 @@ def test_address_lookup_shows_immediate_progress(app_page):
         ),
     )
     app_page.wait_for_function("window.__lastGeocodeSettled >= 1")
-    assert app_page.text_content("#address-status") == ""
+    assert app_page.text_content("#address-status").startswith("Grid ")
     assert app_page.text_content("#address-form button") == "Find"
 
 
