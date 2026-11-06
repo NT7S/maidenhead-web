@@ -59,9 +59,12 @@ function fillInputs({ grid, lat, lon }) {
 
 function setAddressBusy(busy) {
   const button = document.querySelector("#address-form button");
-  if (!button) return;
-  button.disabled = busy;
-  button.textContent = busy ? "Looking…" : "Find";
+  if (button) {
+    button.disabled = busy;
+    button.textContent = busy ? "Looking…" : "Find";
+  }
+  const input = document.querySelector("#address");
+  if (input) input.disabled = busy;
 }
 
 function setAddressStatus(text) {
@@ -198,10 +201,9 @@ $("address-form").addEventListener("submit", async (event) => {
       const grid = convertLatLon(place.lat, place.lon, { fromAddress: true });
       showResult({ address: place.display_name });
       setMarker(place.lat, place.lon, 12);
-      $("status").textContent = "";
-      setAddressStatus(
-        `Grid ${grid} · ${Number(place.lat).toFixed(6)}, ${Number(place.lon).toFixed(6)}`
-      );
+      const summary = `Grid ${grid} · ${Number(place.lat).toFixed(6)}, ${Number(place.lon).toFixed(6)}`;
+      $("status").textContent = summary;
+      setAddressStatus(summary);
     });
   } catch (error) {
     const message =

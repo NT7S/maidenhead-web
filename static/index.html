@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Maidenhead Grid Tools</title>
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <header>
@@ -28,7 +28,7 @@
         also come from OSM. Searches are cached locally in your browser.
         <button type="button" id="clear-cache">Clear local cache</button>
       </p>
-      <p id="address-status" class="hint" role="status" aria-live="polite"></p>
+      <p id="address-status" class="hint" aria-live="off"></p>
     </section>
 
     <section class="panel two-col">
@@ -75,6 +75,6 @@
 
   <script src="vendor/leaflet/leaflet.js"></script>
   <script src="grid.js?v=2"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

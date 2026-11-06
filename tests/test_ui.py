@@ -164,7 +164,52 @@ def test_address_lookup_shows_immediate_progress(app_page):
     )
     app_page.wait_for_function("window.__lastGeocodeSettled >= 1")
     assert app_page.text_content("#address-status").startswith("Grid ")
+    assert app_page.text_content("#status") == app_page.text_content("#address-status")
     assert app_page.text_content("#address-form button") == "Find"
+
+
+def test_address_not_found_shows_inline_error(app_page):
+    app_page.route(
+        NOMINATIM_PATTERN,
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body="[]"
+        ),
+    )
+    submit_address(app_page, "Nowhere")
+    app_page.wait_for_function(
+        "document.querySelector('#address-status').textContent.includes('not found')"
+    )
+    assert "address not found" in app_page.text_content("#status").lower()
+    assert not app_page.locator("#address").is_disabled()
+
+
+def test_local_conversion_restores_address_controls(app_page):
+    held = {}
+    app_page.route(NOMINATIM_PATTERN, lambda route: held.setdefault("route", route))
+    submit_address(app_page, "Hold Place")
+    assert wait_until(lambda: "route" in held, timeout=5)
+    assert app_page.locator("#address").is_disabled()
+
+    app_page.fill("#lat", "0")
+    app_page.fill("#lon", "0")
+    app_page.click("#latlon-form button")
+    app_page.wait_for_function(
+        "document.querySelector('#result-grid').textContent === 'JJ00aa'"
+    )
+    assert not app_page.locator("#address").is_disabled()
+    assert app_page.locator("#address-form button").is_enabled()
+    assert app_page.text_content("#address-status") == ""
+
+    held["route"].fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps(
+            [{"lat": "10", "lon": "20", "display_name": "Stale Place"}]
+        ),
+    )
+    app_page.wait_for_function("window.__lastGeocodeSettled >= 1")
+    assert app_page.text_content("#result-grid") == "JJ00aa"
+    assert app_page.text_content("#result-address") == "—"
 
 
 def test_late_address_does_not_overwrite_local_conversion(app_page):
